@@ -51,12 +51,12 @@ if ($_SERVER["REQUEST_METHOD"] === "POST") {
             $placa = null;
         }
 
-        // Builder + Factory Method: construye el perfil y asigna el tipo de usuario.
+        // Builder + Factory Method: construye los datos y delega la creación del perfil al creador concreto.
         $datos = (new UsuarioBuilder())
             ->nombre($nombre)->apellido($apellido)->correo($correo)->telefono($telefono)
             ->password($password)->tipoVehiculo($tipoVehiculo)->placa($placa)->construir();
         $factory = $rol === "conductor" ? new ConductorFactory() : new PasajeroFactory();
-        $datos = $factory->crear($datos);
+        $datos = $factory->prepararRegistro($datos);
         $perfil = new PerfilUsuario($datos); // Prototype disponible para clonar perfiles sin alterar el original.
 
         $nombre = $datos['nombre']; $apellido = $datos['apellido']; $correo = $datos['correo'];

@@ -1,10 +1,53 @@
 <?php
 /* Patrones GoF aplicados a RideShare. */
 
-// 2. Factory Method
-interface UsuarioFactory { public function crear(array $datos): array; }
-class PasajeroFactory implements UsuarioFactory { public function crear(array $d): array { $d['rol']='pasajero'; $d['tipo_vehiculo']=null; $d['placa']=null; return $d; } }
-class ConductorFactory implements UsuarioFactory { public function crear(array $d): array { $d['rol']='conductor'; return $d; } }
+// 2. FACTORY METHOD
+// Producto: define lo que todos los perfiles creados por la fábrica deben entregar.
+interface UsuarioProducto {
+    public function obtenerDatos(): array;
+}
+
+// Productos concretos.
+class Pasajero implements UsuarioProducto {
+    public function __construct(private array $datos) {
+        $this->datos['rol'] = 'pasajero';
+        $this->datos['tipo_vehiculo'] = null;
+        $this->datos['placa'] = null;
+    }
+    public function obtenerDatos(): array { return $this->datos; }
+}
+
+class Conductor implements UsuarioProducto {
+    public function __construct(private array $datos) {
+        $this->datos['rol'] = 'conductor';
+    }
+    public function obtenerDatos(): array { return $this->datos; }
+}
+
+// Creador: contiene la lógica común y delega la creación concreta.
+abstract class UsuarioFactory {
+    // Este es el FACTORY METHOD.
+    abstract public function crearUsuario(array $datos): UsuarioProducto;
+
+    // Lógica de negocio común desacoplada de la clase concreta que se crea.
+    public function prepararRegistro(array $datos): array {
+        $usuario = $this->crearUsuario($datos);
+        return $usuario->obtenerDatos();
+    }
+}
+
+// Creadores concretos: cada uno decide qué producto crear.
+class PasajeroFactory extends UsuarioFactory {
+    public function crearUsuario(array $datos): UsuarioProducto {
+        return new Pasajero($datos);
+    }
+}
+
+class ConductorFactory extends UsuarioFactory {
+    public function crearUsuario(array $datos): UsuarioProducto {
+        return new Conductor($datos);
+    }
+}
 
 // 3. Builder
 class UsuarioBuilder {
