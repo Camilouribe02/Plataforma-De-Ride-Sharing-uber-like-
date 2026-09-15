@@ -1,0 +1,83 @@
+<?php
+session_start();
+require_once "conexion.php";
+
+if (!isset($_SESSION['usuario_id'])) { header('Location: index.php'); exit; }
+$id = (int)$_SESSION['usuario_id'];
+$stmt = $conexion->prepare("SELECT id,nombre,apellido,correo,rol,foto FROM usuarios WHERE id=? LIMIT 1");
+$stmt->bind_param('i',$id); $stmt->execute();
+$usuario = $stmt->get_result()->fetch_assoc();
+if (!$usuario) { session_destroy(); header('Location: index.php'); exit; }
+if (($usuario['rol'] ?? '') === 'conductor') { $esConductor=true; } else { $esConductor=false; }
+$nombre = htmlspecialchars($usuario['nombre'] ?? 'Usuario', ENT_QUOTES, 'UTF-8');
+$foto = htmlspecialchars($usuario['foto'] ?? '', ENT_QUOTES, 'UTF-8');
+?>
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RideShare | Solicitar viaje</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+<link rel="stylesheet" href="assets/style.css?v=20260912">
+</head>
+<body class="app-body">
+<header class="app-header">
+  <div class="app-brand"><span class="brand-mark">R</span><span>RIDESHARE</span><small>SANTANDER</small></div>
+  <div class="header-actions">
+    <span class="welcome">Hola, <?= $nombre ?></span>
+    <button class="avatar" id="profileBtn" title="Perfil"><?= $foto ? '<img src="'.$foto.'" alt="">' : '👤' ?></button>
+    <a href="logout.php" class="logout-link">Salir</a>
+  </div>
+</header>
+
+<main class="ride-layout">
+  <section class="map-section">
+    <div id="map"></div>
+    <div class="map-top-card">
+      <div class="location-status"><span class="pulse"></span><span id="locationText">Buscando tu ubicación...</span></div>
+      <button id="locateBtn" class="round-btn" title="Mi ubicación">⌖</button>
+    </div>
+    <div class="map-legend"><span><i class="dot origin-dot"></i>Tu ubicación</span><span><i class="flag">⚑</i>Destino</span></div>
+    <div class="map-credit">Mapa © OpenStreetMap · RideShare</div>
+  </section>
+
+  <aside class="ride-panel">
+    <div class="panel-scroll">
+      <div class="panel-heading"><span class="eyebrow">NUEVO VIAJE</span><h1>¿A dónde vas?</h1><p>Viaja dentro de Bucaramanga y Santander.</p></div>
+
+      <div class="route-box">
+        <div class="route-row"><span class="route-icon current">●</span><div><small>ORIGEN</small><strong id="originLabel">Detectando ubicación...</strong></div></div>
+        <div class="route-line"></div>
+        <div class="route-row destination-row"><span class="route-icon destination">⚑</span><div class="search-wrap"><small>DESTINO</small><input id="destinationInput" autocomplete="off" placeholder="Busca una dirección, colegio, universidad..." /></div></div>
+      </div>
+      <div id="searchResults" class="search-results"></div>
+
+      <section class="choice-section"><div class="section-title">Elige tu vehículo</div>
+        <div class="vehicle-grid">
+          <button class="vehicle-card active" data-vehicle="moto"><span class="vehicle-icon">🏍️</span><span><b>Moto</b><small>Rápida y ágil</small></span><strong id="motoPrice">—</strong></button>
+          <button class="vehicle-card" data-vehicle="carro"><span class="vehicle-icon">🚗</span><span><b>Carro</b><small>Cómodo y seguro</small></span><strong id="carroPrice">—</strong></button>
+        </div>
+      </section>
+
+      <section class="fare-card" id="fareCard"><div><span>Tarifa estimada</span><small id="distanceText">Selecciona un destino</small></div><strong id="selectedPrice">$0</strong></section>
+
+      <section class="choice-section"><div class="section-title">Método de pago</div>
+        <div class="payment-grid">
+          <button class="payment-card active" data-payment="efectivo"><span>💵</span><b>Efectivo</b></button>
+          <button class="payment-card" data-payment="tarjeta"><span>💳</span><b>Tarjeta</b></button>
+          <button class="payment-card" data-payment="nequi"><span>🟣</span><b>Nequi</b></button>
+        </div>
+      </section>
+
+      <button id="requestBtn" class="request-btn" disabled>Selecciona un destino <span>→</span></button>
+      <p class="small-note">La tarifa es estimada y se calcula según la distancia de la ruta.</p>
+    </div>
+  </aside>
+</main>
+
+<div id="toast" class="toast"></div>
+<div id="profileModal" class="modal"><div class="modal-card"><button class="modal-close" id="closeProfile">×</button><div class="profile-big"><?= $foto ? '<img src="'.$foto.'" alt="">' : '👤' ?></div><h2><?= $nombre ?></h2><p>Cuenta de pasajero</p><a href="logout.php" class="modal-logout">Cerrar sesión</a></div></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="assets/app.js?v=20260912"></script>
+</body></html>

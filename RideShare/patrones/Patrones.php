@@ -1,7 +1,88 @@
 <?php
 /* Patrones GoF aplicados a RideShare. */
 
-// 2. FACTORY METHOD
+// 1. Abstract Factory
+// Crea familias de objetos relacionados (vehículo + configuración) sin que
+// el registro tenga que conocer las clases concretas.
+interface VehiculoProducto {
+    public function obtenerDatos(): array;
+}
+
+interface ConfiguracionVehiculoProducto {
+    public function obtenerDatos(): array;
+}
+
+interface VehiculoAbstractFactory {
+    public function crearVehiculo(array $datos): VehiculoProducto;
+    public function crearConfiguracion(array $datos): ConfiguracionVehiculoProducto;
+}
+
+class MotoProducto implements VehiculoProducto {
+    public function __construct(private array $datos) {
+        $this->datos['tipo_vehiculo'] = 'moto';
+    }
+    public function obtenerDatos(): array { return $this->datos; }
+}
+
+class CarroProducto implements VehiculoProducto {
+    public function __construct(private array $datos) {
+        $this->datos['tipo_vehiculo'] = 'carro';
+    }
+    public function obtenerDatos(): array { return $this->datos; }
+}
+
+class MotoConfiguracion implements ConfiguracionVehiculoProducto {
+    public function __construct(private array $datos) {}
+    public function obtenerDatos(): array {
+        return [
+            'tipo_vehiculo' => 'moto',
+            'placa' => $this->datos['placa'] ?? null,
+            'color_vehiculo' => $this->datos['color_vehiculo'] ?? null
+        ];
+    }
+}
+
+class CarroConfiguracion implements ConfiguracionVehiculoProducto {
+    public function __construct(private array $datos) {}
+    public function obtenerDatos(): array {
+        return [
+            'tipo_vehiculo' => 'carro',
+            'placa' => $this->datos['placa'] ?? null,
+            'color_vehiculo' => $this->datos['color_vehiculo'] ?? null
+        ];
+    }
+}
+
+class MotoAbstractFactory implements VehiculoAbstractFactory {
+    public function crearVehiculo(array $datos): VehiculoProducto {
+        return new MotoProducto($datos);
+    }
+    public function crearConfiguracion(array $datos): ConfiguracionVehiculoProducto {
+        return new MotoConfiguracion($datos);
+    }
+}
+
+class CarroAbstractFactory implements VehiculoAbstractFactory {
+    public function crearVehiculo(array $datos): VehiculoProducto {
+        return new CarroProducto($datos);
+    }
+    public function crearConfiguracion(array $datos): ConfiguracionVehiculoProducto {
+        return new CarroConfiguracion($datos);
+    }
+}
+
+class VehiculoFactoryProvider {
+    public static function obtener(string $tipo): VehiculoAbstractFactory {
+        return match ($tipo) {
+            'moto' => new MotoAbstractFactory(),
+            'carro' => new CarroAbstractFactory(),
+            default => throw new InvalidArgumentException('Tipo de vehículo no válido.')
+        };
+    }
+}
+
+
+// 2. Factory Method
 // Producto: define lo que todos los perfiles creados por la fábrica deben entregar.
 interface UsuarioProducto {
     public function obtenerDatos(): array;
@@ -13,30 +94,41 @@ class Pasajero implements UsuarioProducto {
         $this->datos['rol'] = 'pasajero';
         $this->datos['tipo_vehiculo'] = null;
         $this->datos['placa'] = null;
+        $this->datos['color_vehiculo'] = null;
     }
-    public function obtenerDatos(): array { return $this->datos; }
+
+    public function obtenerDatos(): array {
+        return $this->datos;
+    }
 }
 
 class Conductor implements UsuarioProducto {
     public function __construct(private array $datos) {
         $this->datos['rol'] = 'conductor';
     }
-    public function obtenerDatos(): array { return $this->datos; }
+
+    public function obtenerDatos(): array {
+        return $this->datos;
+    }
 }
 
 // Creador: contiene la lógica común y delega la creación concreta.
 abstract class UsuarioFactory {
-    // Este es el FACTORY METHOD.
+    // Factory Method.
     abstract public function crearUsuario(array $datos): UsuarioProducto;
 
-    // Lógica de negocio común desacoplada de la clase concreta que se crea.
     public function prepararRegistro(array $datos): array {
         $usuario = $this->crearUsuario($datos);
         return $usuario->obtenerDatos();
     }
+
+    // Alias para mantener compatible el código existente del proyecto.
+    public function crear(array $datos): array {
+        return $this->prepararRegistro($datos);
+    }
 }
 
-// Creadores concretos: cada uno decide qué producto crear.
+// Creadores concretos.
 class PasajeroFactory extends UsuarioFactory {
     public function crearUsuario(array $datos): UsuarioProducto {
         return new Pasajero($datos);
@@ -59,15 +151,22 @@ class UsuarioBuilder {
     public function password($v): self {$this->d['password']=$v; return $this;}
     public function tipoVehiculo($v): self {$this->d['tipo_vehiculo']=$v; return $this;}
     public function placa($v): self {$this->d['placa']=$v; return $this;}
+    public function colorVehiculo($v): self {$this->d['color_vehiculo']=$v; return $this;}
     public function construir(): array { return $this->d; }
 }
 
 // 4. Prototype
-class PerfilUsuario implements 
-    Stringable {
+class PerfilUsuario implements Stringable {
     public function __construct(public array $datos) {}
-    public function __clone() { $this->datos = array_merge([], $this->datos); }
-    public function __toString(): string { return $this->datos['correo'] ?? ''; }
+    public function __clone() {
+        $this->datos = array_merge([], $this->datos);
+    }
+    public function clonar(): self {
+        return clone $this;
+    }
+    public function __toString(): string {
+        return $this->datos['correo'] ?? '';
+    }
 }
 
 // 5. Adapter
